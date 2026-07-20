@@ -139,18 +139,23 @@
                 tanggal: document.getElementById('tanggal').value
             };
 
-            const res = await fetch('/api/proyek', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
+            try {
+                const res = await fetch('/api/proyek', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const json = await res.json();
 
-            if (res.ok) {
-                tutupModalProyek();
-                loadProyek();
-                e.target.reset();
-            } else {
-                alert('Gagal membuat proyek');
+                if (res.ok) {
+                    tutupModalProyek();
+                    loadProyek();
+                    e.target.reset();
+                } else {
+                    alert('Gagal membuat proyek: ' + (json.error || 'Kesalahan server'));
+                }
+            } catch (err) {
+                alert('Gagal terhubung ke server: ' + err.message);
             }
         }
 
