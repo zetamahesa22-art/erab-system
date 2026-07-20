@@ -1,296 +1,274 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplikasi e-RAB Konstruksi</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>e-RAB System - Output & Cetak Laporan</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Styling khusus saat dokumen dicetak / disimpan ke PDF */
+    @media print {
+      .no-print, nav, #sectionPersiapan, #sectionPekerjaan {
+        display: none !important;
+      }
+      body {
+        background-color: white !important;
+        color: black !important;
+        font-size: 12pt;
+      }
+      .print-card {
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+      }
+      .print-header {
+        display: block !important;
+      }
+    }
+  </style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans min-h-screen">
-    <nav class="bg-slate-900 text-white p-4 shadow-lg flex justify-between items-center">
-        <h1 class="text-xl font-bold">Aplikasi e-RAB Konstruksi</h1>
-        <button onclick="bukaModalProyek()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm font-semibold">+ Buat Proyek</button>
-    </nav>
+<body class="bg-slate-100 text-slate-800 font-sans">
 
-    <div class="max-w-6xl mx-auto p-6 space-y-6">
-        <!-- Daftar Proyek -->
-        <div class="bg-white rounded-lg shadow p-6">
-            <h2 class="text-lg font-bold mb-4">Daftar Proyek / Tipe Proyek</h2>
-            <div id="list-proyek" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- Proyek dimuat secara dinamis -->
-            </div>
-        </div>
+  <!-- Navbar -->
+  <nav class="bg-slate-900 text-white p-4 shadow-lg no-print">
+    <div class="max-w-6xl mx-auto flex justify-between items-center">
+      <h1 class="text-xl font-bold text-sky-400">🏗️ e-RAB System</h1>
+      <span class="text-xs bg-sky-800 text-sky-200 px-2.5 py-1 rounded-full">Output File Ready</span>
+    </div>
+  </nav>
 
-        <!-- Detail Proyek & 12 Item Pekerjaan -->
-        <div id="detail-proyek-section" class="bg-white rounded-lg shadow p-6 hidden">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
-                <h2 id="judul-detail-proyek" class="text-lg font-bold">Rincian Item Pekerjaan</h2>
-                <div class="flex gap-2">
-                    <button onclick="muat12ItemStandar()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded text-xs font-semibold shadow">⚡ Muat 12 Item Pekerjaan Standar</button>
-                    <button onclick="tutupDetail()" class="text-gray-500 hover:text-black text-sm font-semibold px-2">Tutup [X]</button>
-                </div>
-            </div>
-            
-            <!-- Form Tambah Item Pekerjaan Satuan -->
-            <form id="form-item-rab" onsubmit="tambahItemRAB(event)" class="grid grid-cols-1 md:grid-cols-6 gap-3 mb-6 bg-slate-50 p-4 rounded border">
-                <input type="hidden" id="input-proyek-id">
-                <input type="text" id="kategori" placeholder="Kategori (Cth: Persiapan)" class="border p-2 rounded text-sm" required>
-                <input type="text" id="uraian" placeholder="Uraian Pekerjaan" class="border p-2 rounded text-sm md:col-span-2" required>
-                <input type="number" id="volume" placeholder="Volume" step="any" class="border p-2 rounded text-sm" required>
-                <input type="text" id="satuan" placeholder="Satuan (m3, m2, unit)" class="border p-2 rounded text-sm" required>
-                <input type="number" id="harga" placeholder="Harga Satuan (Rp)" step="any" class="border p-2 rounded text-sm" required>
-                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white p-2 rounded text-sm md:col-span-6 font-semibold">+ Tambah Item Manual</button>
-            </form>
+  <div class="max-w-6xl mx-auto p-6 space-y-6">
 
-            <!-- Tabel Item RAB -->
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse text-sm">
-                    <thead>
-                        <tr class="bg-slate-200 border-b">
-                            <th class="p-2">Kategori</th>
-                            <th class="p-2">Uraian Pekerjaan</th>
-                            <th class="p-2">Volume</th>
-                            <th class="p-2">Satuan</th>
-                            <th class="p-2">Harga Satuan</th>
-                            <th class="p-2">Total Harga</th>
-                            <th class="p-2 text-center">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabel-item-rab">
-                        <!-- Item RAB dimuat secara dinamis -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
+    <!-- Header Dokumen Cetak (Hanya Muncul Saat Print/PDF) -->
+    <div class="hidden print-header text-center border-b-2 border-slate-900 pb-4 mb-6">
+      <h1 class="text-2xl font-bold uppercase tracking-wide text-slate-900">Laporan Rencana Anggaran Biaya (RAB)</h1>
+      <p id="printProyekInfo" class="text-sm text-slate-600 mt-1"></p>
     </div>
 
-    <!-- Modal Buat Proyek -->
-    <div id="modal-proyek" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
-        <div class="bg-white p-6 rounded-lg w-full max-w-md shadow-xl">
-            <h3 class="text-lg font-bold mb-4">Buat Proyek Baru</h3>
-            <form onsubmit="buatProyek(event)" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium mb-1">Nama / Tipe Proyek</label>
-                    <input type="text" id="nama_proyek" placeholder="Cth: Pembangunan Gedung / Rumah" class="w-full border p-2 rounded text-sm" required>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Lokasi</label>
-                    <input type="text" id="lokasi" class="w-full border p-2 rounded text-sm">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Pemilik / Instansi</label>
-                    <input type="text" id="pemilik" class="w-full border p-2 rounded text-sm">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Tanggal</label>
-                    <input type="date" id="tanggal" class="w-full border p-2 rounded text-sm">
-                </div>
-                <div class="flex justify-end space-x-2 pt-2">
-                    <button type="button" onclick="tutupModalProyek()" class="px-4 py-2 border rounded text-sm">Batal</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded text-sm font-semibold">Simpan</button>
-                </div>
-            </form>
-        </div>
+    <!-- Langkah 1: Buat Proyek -->
+    <div id="sectionPersiapan" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 no-print">
+      <h2 class="text-lg font-bold text-slate-900 mb-4">1. Informasi Proyek</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <input id="namaProyek" type="text" placeholder="Nama Proyek (ex: Rumah Tipe 36)" class="border p-2.5 rounded-lg w-full text-sm">
+        <input id="lokasiProyek" type="text" placeholder="Lokasi (ex: Purwokerto)" class="border p-2.5 rounded-lg w-full text-sm">
+        <button onclick="buatProyek()" class="bg-sky-600 hover:bg-sky-700 text-white font-medium px-4 py-2.5 rounded-lg text-sm transition">
+          Buat Proyek
+        </button>
+      </div>
+      <p id="proyekActiveInfo" class="mt-3 text-sm text-emerald-600 font-semibold hidden"></p>
     </div>
 
-    <script>
-        let currentProyekId = null;
+    <!-- Langkah 2: Input Item Pekerjaan -->
+    <div id="sectionPekerjaan" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 opacity-50 pointer-events-none transition no-print">
+      <h2 class="text-lg font-bold text-slate-900 mb-4">2. Tambahkan Item Pekerjaan & Volume Fisik</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <select id="selectPekerjaan" class="border p-2.5 rounded-lg w-full text-sm"></select>
+        <input id="volumePekerjaan" type="number" step="0.01" placeholder="Volume Pekerjaan" class="border p-2.5 rounded-lg w-full text-sm">
+        <button onclick="tambahPekerjaan()" class="bg-slate-800 hover:bg-slate-900 text-white font-medium px-4 py-2.5 rounded-lg text-sm transition">
+          + Tambahkan Pekerjaan
+        </button>
+      </div>
+    </div>
 
-        async function loadProyek() {
-            try {
-                const res = await fetch('/api/proyek');
-                const json = await res.json();
-                const container = document.getElementById('list-proyek');
-                container.innerHTML = '';
-                
-                if (!json.data || json.data.length === 0) {
-                    container.innerHTML = '<p class="text-gray-500 text-sm col-span-2">Belum ada proyek. Silakan buat proyek baru.</p>';
-                    return;
-                }
+    <!-- Hasil Kalkulasi RAB & Output File -->
+    <div id="sectionHasil" class="hidden space-y-6">
+      
+      <!-- Panel Tombol Output File -->
+      <div class="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm no-print">
+        <span class="text-sm font-semibold text-slate-700">Pilihan Output Laporan:</span>
+        <div class="flex gap-3">
+          <button onclick="exportExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-lg text-sm transition flex items-center gap-2">
+            📊 Export Excel (.csv)
+          </button>
+          <button onclick="cetakPDF()" class="bg-slate-800 hover:bg-slate-900 text-white font-medium px-4 py-2 rounded-lg text-sm transition flex items-center gap-2">
+            🖨️ Cetak / Simpan PDF
+          </button>
+        </div>
+      </div>
 
-                json.data.forEach(p => {
-                    container.innerHTML += `
-                        <div class="border p-4 rounded-lg shadow-sm hover:border-blue-500 cursor-pointer flex justify-between items-center bg-slate-50" onclick="pilihProyek(${p.id}, '${p.nama_proyek}')">
-                            <div>
-                                <h3 class="font-bold text-blue-900">${p.nama_proyek}</h3>
-                                <p class="text-xs text-gray-500">Lokasi: ${p.lokasi || '-'}</p>
-                                <p class="text-xs text-gray-600 font-semibold mt-1">Total RAB: Rp ${Number(p.total_rab || 0).toLocaleString('id-ID')}</p>
-                            </div>
-                            <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded font-semibold">Buka &rarr;</span>
-                        </div>
-                    `;
-                });
-            } catch (err) {
-                console.error('Gagal memuat proyek:', err);
-            }
-        }
+      <!-- Tabel Input Pekerjaan -->
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 print-card">
+        <h3 class="font-bold text-slate-900 mb-3">1. Rekapitulasi Volume Pekerjaan</h3>
+        <table class="w-full text-sm text-left border-collapse border border-slate-200">
+          <thead>
+            <tr class="bg-slate-100 border-b">
+              <th class="p-2.5 border">Nama Pekerjaan</th>
+              <th class="p-2.5 border text-center">Volume</th>
+              <th class="p-2.5 border text-center">Satuan</th>
+            </tr>
+          </thead>
+          <tbody id="tablePekerjaan"></tbody>
+        </table>
+      </div>
 
-        function bukaModalProyek() {
-            document.getElementById('modal-proyek').classList.remove('hidden');
-        }
+      <!-- Tabel Shopping List Material -->
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 print-card">
+        <h3 class="font-bold text-slate-900 mb-3">2. Rincian Kebutuhan Belanja Material & Upah (Shopping List)</h3>
+        <table class="w-full text-sm text-left border-collapse border border-slate-200">
+          <thead>
+            <tr class="bg-slate-900 text-white">
+              <th class="p-2.5 border">Material / Tenaga Kerja</th>
+              <th class="p-2.5 border text-center">Kategori</th>
+              <th class="p-2.5 border text-right">Total Kebutuhan</th>
+              <th class="p-2.5 border text-right">Harga Satuan</th>
+              <th class="p-2.5 border text-right">Total Biaya</th>
+            </tr>
+          </thead>
+          <tbody id="tableShoppingList" class="divide-y divide-slate-100"></tbody>
+        </table>
 
-        function tutupModalProyek() {
-            document.getElementById('modal-proyek').classList.add('hidden');
-        }
+        <!-- Grand Total Box -->
+        <div class="mt-6 bg-sky-50 border border-sky-200 p-4 rounded-xl flex justify-between items-center">
+          <span class="font-bold text-sky-900">GRAND TOTAL ESTIMASI BIAYA (RAB):</span>
+          <span id="grandTotalText" class="text-2xl font-extrabold text-sky-700">Rp 0</span>
+        </div>
+      </div>
 
-        async function buatProyek(e) {
-            e.preventDefault();
-            const data = {
-                nama_proyek: document.getElementById('nama_proyek').value,
-                lokasi: document.getElementById('lokasi').value,
-                pemilik: document.getElementById('pemilik').value,
-                tanggal: document.getElementById('tanggal').value
-            };
+      <!-- Tanda Tangan Dokumen (Hanya Muncul Saat Print/PDF) -->
+      <div class="hidden print-header pt-12">
+        <div class="flex justify-between text-center text-sm">
+          <div>
+            <p>Direncanakan Oleh,</p>
+            <p class="font-bold mt-1">Estimator Proyek</p>
+            <div class="h-16"></div>
+            <p>( _______________________ )</p>
+          </div>
+          <div>
+            <p>Disetujui Oleh,</p>
+            <p class="font-bold mt-1">Pemilik Proyek</p>
+            <div class="h-16"></div>
+            <p>( <span id="printNamaKlien">_______________________</span> )</p>
+          </div>
+        </div>
+      </div>
 
-            try {
-                const res = await fetch('/api/proyek', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                const json = await res.json();
+    </div>
 
-                if (res.ok) {
-                    tutupModalProyek();
-                    loadProyek();
-                    e.target.reset();
-                } else {
-                    alert('Gagal membuat proyek: ' + (json.error || 'Kesalahan server'));
-                }
-            } catch (err) {
-                alert('Gagal terhubung ke server: ' + err.message);
-            }
-        }
+  </div>
 
-        async function pilihProyek(id, nama) {
-            currentProyekId = id;
-            document.getElementById('input-proyek-id').value = id;
-            document.getElementById('judul-detail-proyek').innerText = `Rincian Item Pekerjaan: ${nama}`;
-            document.getElementById('detail-proyek-section').classList.remove('hidden');
-            loadItemRAB(id);
-        }
+  <script>
+    let activeProjectId = null;
+    let currentReportData = null;
+    let currentProyekInfo = { nama: '', lokasi: '' };
 
-        function tutupDetail() {
-            currentProyekId = null;
-            document.getElementById('detail-proyek-section').classList.add('hidden');
-        }
+    // Load Master Pekerjaan
+    async function loadMasterPekerjaan() {
+      const res = await fetch('/api/pekerjaan');
+      const data = await res.json();
+      const select = document.getElementById('selectPekerjaan');
+      select.innerHTML = data.map(p => `<option value="${p.id}">${p.nama_pekerjaan} (${p.satuan_pekerjaan})</option>`).join('');
+    }
 
-        async function loadItemRAB(proyekId) {
-            try {
-                const res = await fetch(`/api/rab/${proyekId}`);
-                const json = await res.json();
-                const tbody = document.getElementById('tabel-item-rab');
-                tbody.innerHTML = '';
+    async function buatProyek() {
+      const nama = document.getElementById('namaProyek').value;
+      const lokasi = document.getElementById('lokasiProyek').value;
+      if (!nama) return alert('Nama proyek wajib diisi!');
 
-                if (!json.data || json.data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-gray-500">Belum ada item pekerjaan. Klik tombol <b>"Muat 12 Item Pekerjaan Standar"</b> di atas untuk mulai cepat.</td></tr>';
-                    return;
-                }
+      const res = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nama_proyek: nama, lokasi })
+      });
+      const data = await res.json();
 
-                json.data.forEach(item => {
-                    tbody.innerHTML += `
-                        <tr class="border-b">
-                            <td class="p-2">${item.kategori}</td>
-                            <td class="p-2 font-medium">${item.uraian_pekerjaan}</td>
-                            <td class="p-2">${item.volume}</td>
-                            <td class="p-2">${item.satuan}</td>
-                            <td class="p-2">Rp ${Number(item.harga_satuan).toLocaleString('id-ID')}</td>
-                            <td class="p-2 font-semibold">Rp ${Number(item.total_harga).toLocaleString('id-ID')}</td>
-                            <td class="p-2 text-center">
-                                <button onclick="hapusItem(${item.id})" class="text-red-600 hover:text-red-800 text-xs font-bold">Hapus</button>
-                            </td>
-                        </tr>
-                    `;
-                });
-            } catch (err) {
-                console.error('Gagal memuat item RAB:', err);
-            }
-        }
+      activeProjectId = data.id;
+      currentProyekInfo = { nama, lokasi };
 
-        // Fungsi otomatis memasukkan 12 item pekerjaan standar konstruksi
-        async function muat12ItemStandar() {
-            if (!currentProyekId) return;
-            if (!confirm('Tambahkan 12 item pekerjaan standar ke proyek ini?')) return;
+      document.getElementById('proyekActiveInfo').innerText = `✓ Proyek Aktif: ${data.nama_proyek} (${data.lokasi || 'Tanpa Lokasi'})`;
+      document.getElementById('proyekActiveInfo').classList.remove('hidden');
+      document.getElementById('printProyekInfo').innerText = `Nama Proyek: ${nama} | Lokasi: ${lokasi || '-'}`;
+      document.getElementById('printNamaKlien').innerText = nama;
 
-            const items12 = [
-                { kategori: 'Persiapan', uraian: 'Pembersihan Lahan & Papan Nama Proyek', volume: 1, satuan: 'Ls', harga: 500000 },
-                { kategori: 'Struktur', uraian: 'Galian Tanah Pondasi', volume: 10, satuan: 'm3', harga: 75000 },
-                { kategori: 'Struktur', uraian: 'Urugan Pasir Bawah Pondasi', volume: 2, satuan: 'm3', harga: 150000 },
-                { kategori: 'Struktur', uraian: 'Pasangan Batu Kali / Pondasi', volume: 5, satuan: 'm3', harga: 650000 },
-                { kategori: 'Struktur', uraian: 'Pekerjaan Beton Bertulang (Sloof/Kolom/Balok)', volume: 3, satuan: 'm3', harga: 2500000 },
-                { kategori: 'Dinding', uraian: 'Pasangan Dinding Bata / Hebel', volume: 40, satuan: 'm2', harga: 120000 },
-                { kategori: 'Dinding', uraian: 'Plesteran dan Acian Dinding', volume: 80, satuan: 'm2', harga: 55000 },
-                { kategori: 'Kusen & Pintu', uraian: 'Pembuatan & Pemasangan Kusen, Pintu, Jendela', volume: 4, satuan: 'Unit', harga: 750000 },
-                { kategori: 'Atap', uraian: 'Rangka Atap & Penutup Atap (Genteng/Spandek)', volume: 30, satuan: 'm2', harga: 200000 },
-                { kategori: 'Plafon', uraian: 'Rangka Plafon & Gypsum', volume: 25, satuan: 'm2', harga: 90000 },
-                { kategori: 'Lantai', uraian: 'Pemasangan Lantai Keramik', volume: 25, satuan: 'm2', harga: 140000 },
-                { kategori: 'Finishing', uraian: 'Pengecatan Dinding & Plafon', volume: 105, satuan: 'm2', harga: 35000 }
-            ];
+      document.getElementById('sectionPekerjaan').classList.remove('opacity-50', 'pointer-events-none');
+    }
 
-            for (let item of items12) {
-                await fetch('/api/rab', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        proyek_id: currentProyekId,
-                        kategori: item.kategori,
-                        uraian_pekerjaan: item.uraian,
-                        volume: item.volume,
-                        satuan: item.satuan,
-                        harga_satuan: item.harga
-                    })
-                });
-            }
+    async function tambahPekerjaan() {
+      const pekerjaanId = document.getElementById('selectPekerjaan').value;
+      const volume = document.getElementById('volumePekerjaan').value;
+      if (!volume || volume <= 0) return alert('Volume harus lebih dari 0!');
 
-            loadItemRAB(currentProyekId);
-            loadProyek();
-            alert('12 item pekerjaan standar berhasil dimuat!');
-        }
+      await fetch(`/api/projects/${activeProjectId}/items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pekerjaan_id: pekerjaanId, volume: parseFloat(volume) })
+      });
 
-        async function tambahItemRAB(e) {
-            e.preventDefault();
-            if (!currentProyekId) return;
+      document.getElementById('volumePekerjaan').value = '';
+      refreshReport();
+    }
 
-            const data = {
-                proyek_id: currentProyekId,
-                kategori: document.getElementById('kategori').value,
-                uraian_pekerjaan: document.getElementById('uraian').value,
-                volume: parseFloat(document.getElementById('volume').value),
-                satuan: document.getElementById('satuan').value,
-                harga_satuan: parseFloat(document.getElementById('harga').value)
-            };
+    async function refreshReport() {
+      const res = await fetch(`/api/projects/${activeProjectId}/report`);
+      const data = await res.json();
+      currentReportData = data;
 
-            const res = await fetch('/api/rab', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
+      document.getElementById('sectionHasil').classList.remove('hidden');
 
-            if (res.ok) {
-                loadItemRAB(currentProyekId);
-                loadProyek();
-                document.getElementById('kategori').value = '';
-                document.getElementById('uraian').value = '';
-                document.getElementById('volume').value = '';
-                document.getElementById('satuan').value = '';
-                document.getElementById('harga').value = '';
-            } else {
-                alert('Gagal menambah item pekerjaan');
-            }
-        }
+      // Render Pekerjaan
+      document.getElementById('tablePekerjaan').innerHTML = data.items.map(i => `
+        <tr class="border-b">
+          <td class="p-2.5 border">${i.nama_pekerjaan}</td>
+          <td class="p-2.5 border text-center font-semibold">${i.volume}</td>
+          <td class="p-2.5 border text-center">${i.satuan_pekerjaan}</td>
+        </tr>
+      `).join('');
 
-        async function hapusItem(id) {
-            if (!confirm('Yakin ingin menghapus item ini?')) return;
-            const res = await fetch(`/api/rab/${id}`, { method: 'DELETE' });
-            if (res.ok) {
-                loadItemRAB(currentProyekId);
-                loadProyek();
-            } else {
-                alert('Gagal menghapus item');
-            }
-        }
+      // Render Shopping List
+      document.getElementById('tableShoppingList').innerHTML = data.shoppingList.map(s => `
+        <tr class="border-b">
+          <td class="p-2.5 border font-medium">${s.nama_material}</td>
+          <td class="p-2.5 border text-center"><span class="px-2 py-0.5 text-xs rounded font-bold ${s.kategori === 'MATERIAL' ? 'bg-sky-100 text-sky-700' : 'bg-amber-100 text-amber-700'}">${s.kategori}</span></td>
+          <td class="p-2.5 border text-right font-semibold">${s.total_kebutuhan} ${s.satuan}</td>
+          <td class="p-2.5 border text-right">Rp ${s.harga_satuan.toLocaleString('id-ID')}</td>
+          <td class="p-2.5 border text-right font-bold">Rp ${s.total_biaya.toLocaleString('id-ID')}</td>
+        </tr>
+      `).join('');
 
-        loadProyek();
-    </script>
+      // Render Grand Total
+      document.getElementById('grandTotalText').innerText = 'Rp ' + data.grandTotal.toLocaleString('id-ID');
+    }
+
+    // --- FITUR OUTPUT FILE ---
+
+    // 1. Output PDF / Print Document
+    function cetakPDF() {
+      window.print();
+    }
+
+    // 2. Output File Excel (.CSV)
+    function exportExcel() {
+      if (!currentReportData) return alert('Data laporan belum tersedia!');
+
+      let csv = '\uFEFF'; // BOM UTF-8 agar karakter Excel tidak berantakan
+      csv += `LAPORAN RENCANA ANGGARAN BIAYA (RAB)\n`;
+      csv += `Nama Proyek,${currentProyekInfo.nama}\n`;
+      csv += `Lokasi,${currentProyekInfo.lokasi}\n\n`;
+
+      csv += `1. REKAPITULASI WORK VOLUME\n`;
+      csv += `Nama Pekerjaan,Volume,Satuan\n`;
+      currentReportData.items.forEach(i => {
+        csv += `"${i.nama_pekerjaan}",${i.volume},"${i.satuan_pekerjaan}"\n`;
+      });
+
+      csv += `\n2. SHOPPING LIST MATERIAL & UPAH\n`;
+      csv += `Material / Tenaga Kerja,Kategori,Total Kebutuhan,Satuan,Harga Satuan (Rp),Total Biaya (Rp)\n`;
+      currentReportData.shoppingList.forEach(s => {
+        csv += `"${s.nama_material}","${s.kategori}",${s.total_kebutuhan},"${s.satuan}",${s.harga_satuan},${s.total_biaya}\n`;
+      });
+
+      csv += `\nGRAND TOTAL ESTIMASI BIAYA,,,,"",${currentReportData.grandTotal}\n`;
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `RAB_${currentProyekInfo.nama.replace(/\s+/g, '_')}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    loadMasterPekerjaan();
+  </script>
 </body>
 </html>
