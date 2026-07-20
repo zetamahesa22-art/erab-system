@@ -6,18 +6,19 @@ const { Pool } = require('pg');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Koneksi Database PostgreSQL dengan paksaan IPv4 (family: 4)
+// Koneksi Database PostgreSQL (URL diambil dari Environment Variable di Hosting)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
-  family: 4 
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
+// Inisialisasi Tabel
 const initDb = async () => {
   try {
     await pool.query(`
@@ -48,35 +49,35 @@ const initDb = async () => {
 };
 initDb();
 
-const handleGetProyek = async (req, res) => {
+// ==========================================
+// ENDPOINT API
+// ==========================================
+
+// 1. Ambil Semua Proyek
+app.get('/api/proyek', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM proyek ORDER BY id DESC');
     res.json({ data: result.rows });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-};
+});
 
-const handlePostProyek = async (req, res) => {
-  const { nama_proyek, lokasi, pemilik, tanggal, name } = req.body;
-  const nama = nama_proyek || name;
+// 2. Tambah Proyek
+app.post('/api/proyek', async (req, res) => {
+  const { nama_proyek, lokasi, pemilik, tanggal } = req.body;
   try {
     const result = await pool.query(
       'INSERT INTO proyek (nama_proyek, lokasi, pemilik, tanggal) VALUES ($1, $2, $3, $4) RETURNING id',
-      [nama, lokasi, pemilik, tanggal]
+      [nama_proyek, lokasi, pemilik, tanggal]
     );
     res.json({ message: 'Proyek berhasil ditambahkan', id: result.rows[0].id });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-};
+});
 
-app.get('/api/proyek', handleGetProyek);
-app.get('/api/projects', handleGetProyek);
-
-app.post('/api/proyek', handlePostProyek);
-app.post('/api/projects', handlePostProyek);
-
+// 3. Ambil Detail RAB
 app.get('/api/rab/:proyek_id', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM item_rab WHERE proyek_id = $1', [req.params.proyek_id]);
@@ -86,21 +87,22 @@ app.get('/api/rab/:proyek_id', async (req, res) => {
   }
 });
 
+// 4. Tambah Item RAB
 app.post('/api/rab', async (req, res) => {
-  const { proyek_id, project_id, kategori, uraian_pekerjaan, volume, satuan, harga_satuan } = req.body;
-  const pId = proyek_id || project_id;
+  const { proyek_id, kategori, uraian_pekerjaan, volume, satuan, harga_satuan } = req.body;
   const total_harga = volume * harga_satuan;
 
   try {
     const result = await pool.query(
       `INSERT INTO item_rab (proyek_id, kategori, uraian_pekerjaan, volume, satuan, harga_satuan, total_harga)
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-      [pId, kategori, uraian_pekerjaan, volume, satuan, harga_satuan, total_harga]
+      [proyek_id, kategori, uraian_pekerjaan, volume, satuan, harga_satuan, total_harga]
     );
 
+    // Update total RAB
     await pool.query(
       'UPDATE proyek SET total_rab = (SELECT SUM(total_harga) FROM item_rab WHERE proyek_id = $1) WHERE id = $1',
-      [pId]
+      [proyek_id]
     );
 
     res.json({ message: 'Item RAB berhasil ditambahkan', id: result.rows[0].id });
@@ -109,6 +111,7 @@ app.post('/api/rab', async (req, res) => {
   }
 });
 
+// 5. Hapus Item RAB
 app.delete('/api/rab/:id', async (req, res) => {
   try {
     await pool.query('DELETE FROM item_rab WHERE id = $1', [req.params.id]);
