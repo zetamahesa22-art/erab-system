@@ -6,19 +6,18 @@ const { Pool } = require('pg');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Koneksi Database PostgreSQL
+// Koneksi Database PostgreSQL dengan paksaan IPv4 (family: 4)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
+  family: 4 
 });
 
-// Inisialisasi Tabel
 const initDb = async () => {
   try {
     await pool.query(`
@@ -49,10 +48,6 @@ const initDb = async () => {
 };
 initDb();
 
-// ==========================================
-// ENDPOINT API (Mendukung /proyek dan /projects)
-// ==========================================
-
 const handleGetProyek = async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM proyek ORDER BY id DESC');
@@ -82,7 +77,6 @@ app.get('/api/projects', handleGetProyek);
 app.post('/api/proyek', handlePostProyek);
 app.post('/api/projects', handlePostProyek);
 
-// Handler RAB
 app.get('/api/rab/:proyek_id', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM item_rab WHERE proyek_id = $1', [req.params.proyek_id]);
